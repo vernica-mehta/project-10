@@ -24,3 +24,17 @@ We discuss 3 main tasks to split between the three of this:
 - Fixing the temperature code so that it works
 - Finding literature values for temperature, g and density of exoplanets
 - Changing code so that it becomes an exoplanet instead of a star
+
+## 02 - 09 - 2025 - notes from group meeting
+
+At this stage, we have a finalised equation for the simple pseudo-gray model planet atmosphere.
+
+$$T^4(\tau_H)=\frac{\kappa_J}{\kappa_B}\frac{3}{4}T_{eff}^4\left[\tau_H+\frac{1}{\sqrt{3}}+\frac{4W}{3}\left(\frac{T_{irr}}{T_{eff}}\right)^4\right)\right]$$
+
+Where for the pseudo-gray atmosphere, $\kappa_J/\kappa_B=1$, and $W=(r_\ast/D)^2\times{f}$, where $f=1/2$ for the stellar radiation being evenly spread over the hemisphere of the planet. The only part we are unsure about at the moment is $\tau_H$, and we need to look further to understand exactly how it is dependent on the atmosphere of the exoplanet.
+
+We have broken the next part of the project down into three components for us to work on this week:
+
+- Griffin: finish the code for `T_tau`, where an input tau grid outputs temperature
+- Vernica: look into $\tau_H$ and apply this to the function, testing the `structure.py` code to get some initial model results
+- Nathan: look beyond the grey atmosphere model, into what we need to do to model non-grey atmosphere
