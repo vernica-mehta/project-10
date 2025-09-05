@@ -1,0 +1,96 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from astropy.io import fits
+import astropy.constants as c
+import astropy.units as u
+from scipy.interpolate import RegularGridInterpolator
+from scipy.integrate import solve_ivp, cumulative_trapezoid
+import opac
+from scipy.special import expn
+import utils
+
+
+class GreyModel(object):
+
+    def __init__(self, Teff=124.4, Tirr=6500, g=2288, r=c.R_sun, D=7.78*1e12):
+        
+        # setting quantities with units
+        self.Teff = Teff * u.K
+        self.Tirr = Tirr * u.K
+        self._g = g * u.cm / u.s**2
+        self.r = r
+        self.D = D * u.m
+
+        # initial tau grid
+        self._tau_h = np.concatenate((np.arange(3)/3*1e-3,np.logspace(-3,1.3,30)))
+
+        # frequency grid
+        wavs = np.linspace(1,200,1000) * u.um
+        self.freqs = (c.c / wavs).to(u.Hz)
+
+    @property
+    def g(self):
+        return self._g
+
+    @property
+    def tau_h(self):
+        return self._tau_h
+
+    @property
+    def T_tau(self):
+        return utils.T_tau(self._tau_h, self.Teff, self.Tirr, 1, 1, 1/2, self.r, self.D)
+
+    @property
+    def F_inc(self):
+        return utils.irradiation(self.r, self.D, self.freqs, self.Tirr)
+
+    def load_opacities(self):
+        # getting opacities from file
+        f_kappa = fits.open('Ross_Planck_opac.fits')
+        kappa = f_kappa['kappa_Ross [cm**2/g]'].data
+
+        # Load the equation of state
+        f_eos = fits.open('rho_Ui_mu_ns_ne.fits')
+        rho = f_eos['rho [g/cm**3]'].data
+
+        # set intial temperature and pressure grids
+        h = f_kappa[0].header
+        T_grid = h['CRVAL1'] + np.arange(h['NAXIS1'])*h['CDELT1']
+        Ps_log10 = h['CRVAL2'] + np.arange(h['NAXIS2'])*h['CDELT2']
+        P0 = 10**(Ps_log10[0])
+
+        # interpolation functions for opacities and eos
+        f_kappa_interp = RegularGridInterpolator((Ps_log10, T_grid), kappa)
+        f_rho_interp = RegularGridInterpolator((Ps_log10, T_grid), rho)
+
+        # interpolations
+        sol = solve_ivp(utils.dP_dTau, [0,20], [P0], 
+                        args=(self.T_tau, self.g, f_kappa_interp), 
+                        t_eval=self.tau_h, method='RK45')
+
+        Ps = sol.y[0] * u.dyn / u.cm**2
+        Ts = self.T_tau
+        kappa_bars = f_kappa_interp((np.log10(Ps), Ts))
+        rhos = f_rho_interp((np.log10(Ps), Ts))
+
+        return Ps, Ts, rhos, kappa_bars
+
+    @property
+    def spectrum(self):
+        Ps, Ts, rhos, kappa_bars = self.load_opacities()
+
+        local = np.zeros_like((self.freqs.value)*(u.g / u.s**2))
+        kappa_nu_bars = np.empty((len(self.freqs), len(self.tau_h)))
+        for i, (T, P, rho) in enumerate(zip(Ts, Ps, rhos)):
+            kappa_nu_bars[:,i] = opac.kappa_cont((c.c/self.freqs), np.log10(P), T)/rho
+
+        for i,w in enumerate(self.freqs):
+            tau_nu = cumulative_trapezoid(kappa_nu_bars[i]/kappa_bars, x=self.tau_h, initial=0)
+            Slambda  = utils.planck(w, self.T_tau)
+            local[i] = 0.5*(Slambda[0]*expn(3,0) + \
+                np.sum((Slambda[1:]-Slambda[:-1])/(tau_nu[1:]-tau_nu[:-1])*\
+                    (expn(4,tau_nu[:-1])-expn(4,tau_nu[1:]))))
+
+        irr = (self.F_inc).cgs
+
+        return local + irr
