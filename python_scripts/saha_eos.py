@@ -156,6 +156,10 @@ def saha(n_e, T):
     #mu is mean "molecular" weight, and we make the approximation that
     #electrons have zero weight.
     mu = np.sum(abund*masses)/(np.sum(abund) + f_e)
+    # Safeguard: prevent mu from being zero or negative
+    if mu <= 0 or not np.isfinite(mu):
+        mu = 1e-10  # set to a small positive value
+        warnings.warn("Mean molecular weight (mu) became zero or non-finite; set to small positive value.")
     
     #Finally, we should compute the internal energy with respect to neutral gas.
     #This is the internal energy per H atom, divided by the mass in grams per H atom. 
@@ -255,9 +259,9 @@ def P_T_tables(Ps, Ts, savefile=''):
     """
     # Some defaults
     if Ps is None:
-        Ps = np.logspace(-4,6,41)*u.dyn/u.cm**2
+        Ps = np.linspace(10**(-6),10**(3),41)*u.dyn/u.cm**2
     if Ts is None:
-        Ts = (2000 + 500*np.arange(47))*u.K
+        Ts = 50*np.arange(1,48)*u.K
         
     
     Ps_log = np.log(Ps.to(u.dyne/u.cm**2).value)

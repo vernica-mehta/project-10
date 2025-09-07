@@ -60,13 +60,18 @@ class GreyModel(object):
         P0 = 10**(Ps_log10[0])
 
         # interpolation functions for opacities and eos
-        f_kappa_interp = RegularGridInterpolator((Ps_log10, T_grid), kappa)
-        f_rho_interp = RegularGridInterpolator((Ps_log10, T_grid), rho)
+        f_kappa_interp = RegularGridInterpolator((Ps_log10, T_grid), kappa, bounds_error=False, fill_value=None)
+        f_rho_interp = RegularGridInterpolator((Ps_log10, T_grid), rho, bounds_error=False, fill_value=None)
 
         # interpolations
-        sol = solve_ivp(utils.dP_dTau, [0,20], [P0], 
-                        args=(self.T_tau, self.g, f_kappa_interp), 
-                        t_eval=self.tau_h, method='RK45')
+        sol = solve_ivp(
+            utils.dP_dTau,
+            [0, 20],
+            [P0],
+            args=(self.tau_h, self.T_tau, self.g, f_kappa_interp),
+            t_eval=self.tau_h,
+            method='RK45'
+        )
 
         Ps = sol.y[0] * u.dyn / u.cm**2
         Ts = self.T_tau

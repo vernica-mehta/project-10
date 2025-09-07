@@ -22,7 +22,6 @@ http://spiff.rit.edu/classes/phys370/lectures/statstar/statstar_python3.py
 import saha_eos as eos
 _ = a = eos.P_T_tables(None, None, savefile='saha_eos.fits')
 """
-
 #From OCR online, from https://articles.adsabs.harvard.edu/pdf/1988A%26A...193..189J
 #A to F in columns, n=2 to 6 in rows
 Hmff_table = np.array(
@@ -338,21 +337,23 @@ if __name__=="__main__":
     plt.clf()
     nu = dnu*np.arange(1000) + dnu/2
     natoms = f_eos['ns [cm^-3]'].data.shape[2]//3
-    kappa_bar_Planck = np.zeros_like(f[0].data)
-    kappa_bar_Ross = np.zeros_like(f[0].data)
+    kappa_bar_Planck = np.zeros_like(f_eos[0].data)
+    kappa_bar_Ross = np.zeros_like(f_eos[0].data)
     for i, P_log10 in enumerate(Ps_log10):
         for j, T in enumerate(Ts):
             nHI = f_eos['ns [cm^-3]'].data[i,j,0]
             nHII = f_eos['ns [cm^-3]'].data[i,j,1]
             nHm = f_eos['ns [cm^-3]'].data[i,j,2]
             ne = f_eos['n_e [cm^-3]'].data[i,j]
-            #Compute the volume-weighted absorption coefficient, using Hydrogen
+            # Compute the volume-weighted absorption coefficient, using Hydrogen
             kappa = kappa_cont_H(nu, T, nHI, nHII, nHm, ne)
-            #Now compute the Rosseland and Planck means.
+            # Add a small floor to kappa to avoid division by zero
+            kappa_safe = np.maximum(kappa, 1e-30)
+            # Now compute the Rosseland and Planck means.
             Bnu = nu**3/(np.exp(h_kB_cgs*nu/T)-1)
             dBnu = nu**4 * np.exp(h_kB_cgs*nu/T)/(np.exp(h_kB_cgs*nu/T)-1)**2
             kappa_bar_Planck[i,j] = np.sum(kappa*Bnu)/np.sum(Bnu)/rho[i,j]
-            kappa_bar_Ross[i,j] = 1/(np.sum(dBnu/kappa)/np.sum(dBnu))/rho[i,j]
+            kappa_bar_Ross[i,j] = 1/(np.sum(dBnu/kappa_safe)/np.sum(dBnu))/rho[i,j]
             if (i==30): #This is log_10(P)=3.5 - similar to solar photosphere.
                 if ((j < 18) & (j % 2 == 0)):
                     plt.loglog(3e8/nu, kappa/rho[i,j], label=f'T={T}K')

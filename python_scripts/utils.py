@@ -15,7 +15,8 @@ def T_tau(tau_h, Teff, Tirr, kappa_j, kappa_b, f, r, D):
 
 	return (T**0.25).cgs
 
-def dP_dTau(_, P, T, g, f_kappa):
+def dP_dTau(tau, P, tau_grid, T_grid, g, f_kappa):
+	T = np.interp(tau, tau_grid, T_grid)
 	kappa_bar = f_kappa((np.log10(P), T))
 	return g / kappa_bar
     
