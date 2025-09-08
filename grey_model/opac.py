@@ -236,14 +236,15 @@ def Hmbf(nu, T):
     nu: Frequency or a list (numpy array) of frequencies.
     """
     Cn = [152.519, 49.534, -118.858, 92.536,-34.194,4.982]
-    alpha = np.zeros_like(nu)
-    wave_um = c.c.si.value/nu * 1e6
+    nu_val = nu.to_value(u.Hz) if hasattr(nu, 'unit') else nu
+    alpha = np.zeros_like(nu_val)
+    wave_um = c.c.si.value/nu_val * 1e6
     for n in range(1,7):
         alpha += Cn[n-1] * np.abs(1/wave_um - 1/1.6419)**((n-1)/2)
     alpha *= (wave_um<=1.6419) * 1e-18 * wave_um**3 * np.abs(1/wave_um - 1/1.6419)**(3/2)
-    #Return the cross-section, corrected for stimulated emission so it can be directly
-    #used as an opacity.
-    return alpha * (1-np.exp(-h_kB_cgs*nu/T))
+    # Ensure T is float in K
+    T_val = T.to_value(u.K) if hasattr(T, 'unit') else T
+    return alpha * (1-np.exp(-h_kB_cgs*nu_val/T_val))
     
 
 def Hmff(nu, T):
@@ -256,17 +257,19 @@ def Hmff(nu, T):
     ----------
     nu: Frequency or a list (numpy array) of frequencies.
     """
-    alpha = np.zeros_like(nu)
-    wave_um = np.maximum(c.c.si.value/nu * 1e6,0.3645)
+    nu_val = nu.to_value(u.Hz) if hasattr(nu, 'unit') else nu
+    alpha = np.zeros_like(nu_val)
+    wave_um = np.maximum(c.c.si.value/nu_val * 1e6,0.3645)
+    T_val = T.to_value(u.K) if hasattr(T, 'unit') else T
     for n in range(2,7):
         row = n-2
-        coeff = 1e-29 * (5040/T)**((n+1)/2)
+        coeff = 1e-29 * (5040/T_val)**((n+1)/2)
         for i, exponent in enumerate([2,0,-1,-2,-3,-4]):
             alpha += coeff*wave_um**exponent * Hmff_table[row,i]
     #alpha is now in units of cross section per unit electron pressure
     #We want to multiply by the ratio of electron pressure to electron 
     #density, which is just k_B T
-    return alpha * c.k_B.cgs.value * T 
+    return alpha * c.k_B.cgs.value * T_val 
     
 def Hbf(nu, T):
     """Compute the Hydrogen bound-free cross sections in cgs units as a
@@ -284,12 +287,21 @@ def Hbf(nu, T):
         [1.101,-5.765e13,4.593e27],
         [1.102,-3.909e13,2.371e27],
         [1.0986,-2.704e13,1.229e27]])
+    nu_val = nu.to_value(u.Hz) if hasattr(nu, 'unit') else nu
+    T_val = T.to_value(u.K) if hasattr(T, 'unit') else T
+    alpha = np.zeros_like(nu_val)
+    ABC = np.array([[.9916,2.719e13,-2.268e30],
+        [1.105,-2.375e14,4.077e28],
+        [1.101,-9.863e13,1.035e28],
+        [1.101,-5.765e13,4.593e27],
+        [1.102,-3.909e13,2.371e27],
+        [1.0986,-2.704e13,1.229e27]])
     for n in range(1,7):
-        Boltzmann_fact = n**2*np.exp(-H_excitation_T*(1-1/n**2)/T)
-        alpha += 2.815e29/n**5/nu**3*(ABC[n-1,0] + (ABC[n-1,1] + ABC[n-1,2]/nu)/nu) * (nu>3.28805e15/n**2) * Boltzmann_fact
+        Boltzmann_fact = n**2*np.exp(-H_excitation_T*(1-1/n**2)/T_val)
+        alpha += 2.815e29/n**5/nu_val**3*(ABC[n-1,0] + (ABC[n-1,1] + ABC[n-1,2]/nu_val)/nu_val) * (nu_val>3.28805e15/n**2) * Boltzmann_fact
     #FIXME : add higher values of n
     #FIXME : Add in the partition function U, which is implicitly taken to be 2.0 above.
-    return alpha * (1-np.exp(-h_kB_cgs*nu/T))
+    return alpha * (1-np.exp(-h_kB_cgs*nu_val/T_val))
     
 
 def Hff(nu, T):
@@ -303,7 +315,9 @@ def Hff(nu, T):
     """
     #Approximate a Gaunt factor of 1.0!
     #FIXME : Remove the approximation
-    return Hff_const /nu**3/np.sqrt(T)
+    nu_val = nu.to_value(u.Hz) if hasattr(nu, 'unit') else nu
+    T_val = T.to_value(u.K) if hasattr(T, 'unit') else T
+    return Hff_const /nu_val**3/np.sqrt(T_val)
 
 def kappa_cont(nu, log10P, T):
     """Compute the continuum opacity in cgs units as a function of
@@ -314,12 +328,13 @@ def kappa_cont(nu, log10P, T):
     log10P: float
     T: float
     """
-    nHI = 10**(log10ns[0](log10P, T, grid=False))
-    nHII = 10**(log10ns[1](log10P, T, grid=False))
-    nHm = 10**(log10ns[2](log10P, T, grid=False))
-    ne = 10**(log10ne(log10P, T, grid=False))
-    kappa = nHI * Hbf(nu, T) + nHII * ne * Hff(nu, T) + \
-            nHm * Hmbf(nu, T) + nHI * ne * Hmff(nu, T)
+    T_val = T.to_value(u.K) if hasattr(T, 'unit') else T
+    nHI = 10**(log10ns[0](log10P, T_val, grid=False))
+    nHII = 10**(log10ns[1](log10P, T_val, grid=False))
+    nHm = 10**(log10ns[2](log10P, T_val, grid=False))
+    ne = 10**(log10ne(log10P, T_val, grid=False))
+    kappa = nHI * Hbf(nu, T_val) + nHII * ne * Hff(nu, T_val) + \
+        nHm * Hmbf(nu, T_val) + nHI * ne * Hmff(nu, T_val)
     return kappa
 
 def kappa_cont_H(nu, T, nHI, nHII, nHm, ne):
@@ -357,6 +372,9 @@ if __name__=="__main__":
             if (i==30): #This is log_10(P)=3.5 - similar to solar photosphere.
                 if ((j < 18) & (j % 2 == 0)):
                     plt.loglog(3e8/nu, kappa/rho[i,j], label=f'T={T}K')
+    # Safeguard: replace NaN or non-finite values with a small positive number
+    kappa_bar_Ross = np.where(np.isfinite(kappa_bar_Ross), kappa_bar_Ross, 1e-30)
+    kappa_bar_Planck = np.where(np.isfinite(kappa_bar_Planck), kappa_bar_Planck, 1e-30)
     hdu1 = fits.PrimaryHDU(kappa_bar_Ross)
     hdu1.header['CRVAL1'] = Ts[0]
     hdu1.header['CDELT1'] = Ts[1]-Ts[0]
@@ -371,4 +389,4 @@ if __name__=="__main__":
     hdulist.writeto('Ross_Planck_opac.fits', overwrite=True)
     plt.legend()
     plt.xlabel('Wavelength [m]')
-    plt.ylabel(r'$\kappa_R$ [cm$^2$/g]')
+    plt.ylabel(r'$\\kappa_R$ [cm$^2$/g]')

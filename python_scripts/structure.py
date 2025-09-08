@@ -17,7 +17,7 @@ import astropy.constants as c
 import numpy as np
 import astropy.io.fits as pyfits
 import matplotlib.pyplot as plt
-import opac
+import grey_model.opac as opac
 from scipy.special import expn
 from strontium_barium import *
 plt.ion()

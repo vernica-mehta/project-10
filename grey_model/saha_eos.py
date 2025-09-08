@@ -276,10 +276,10 @@ def P_T_tables(Ps, Ts, savefile=''):
     #Find the number of atoms and ions
     n_e, ns, mu, Ui, rho  = ns_from_P_T(Ps[0], Ts[0])
     n_species = len(ns)
-    
+
     ns_tab = np.empty((nP,nT,n_species))
     n_e_tab = np.empty((nP,nT))
-    
+
     #gamma1_tab = np.empty((nT, nP))
     #entropy_tab = np.empty((nT, nP))
     dT = 1*u.K #A small amount of temperature!
@@ -289,42 +289,50 @@ def P_T_tables(Ps, Ts, savefile=''):
             #Compute number densities and densities, and also a single-sided derivative
             n_e, ns, mu, Ui, rho  = ns_from_P_T(P, T)
             _, _, mu_plus, Ui_plus, rho_plus = ns_from_P_T(P, T + dT)
-            
+
             #Fill in the tables not involving derivatives
             rho_tab[i,j] = rho #Already in cgs
             Ui_tab[i,j] = Ui.to(u.erg/u.g).value
             mu_tab[i,j] = mu
             ns_tab[i,j] = ns.cgs.value
             n_e_tab[i,j] = n_e.cgs.value
-            
+
             #Now the tables involving derivatives
             Q_tab[i,j] = 1 - (mu_plus - mu)/dT * T/mu
-            cP_tab[i,j] = ((Ui_plus - Ui)/dT).cgs.value + 5/2*k_b_u_cgs*Q_tab[i,j]/mu_tab[i,j] 
+            cP_tab[i,j] = ((Ui_plus - Ui)/dT).cgs.value + 5/2*k_b_u_cgs*Q_tab[i,j]/mu_tab[i,j]
 
-        
+    # Safeguard: replace NaN or non-finite values with a small positive number
+    rho_tab = np.where(np.isfinite(rho_tab), rho_tab, 1e-30)
+    Ui_tab = np.where(np.isfinite(Ui_tab), Ui_tab, 1e-30)
+    mu_tab = np.where(np.isfinite(mu_tab), mu_tab, 1e-10)
+    ns_tab = np.where(np.isfinite(ns_tab), ns_tab, 1e-30)
+    n_e_tab = np.where(np.isfinite(n_e_tab), n_e_tab, 1e-30)
+    Q_tab = np.where(np.isfinite(Q_tab), Q_tab, 1e-30)
+    cP_tab = np.where(np.isfinite(cP_tab), cP_tab, 1e-30)
+
     if len(savefile)>0:
-            hdu1 = pyfits.PrimaryHDU(rho_tab)
-            hdu1.header['CRVAL1'] = Ts[0].cgs.value
-            hdu1.header['CDELT1'] = (Ts[1]-Ts[0]).cgs.value
-            hdu1.header['CTYPE1'] = 'Temperature [K]'
-            hdu1.header['CRVAL2'] = (Ps_log[0])/np.log(10)
-            hdu1.header['CDELT2'] = (Ps_log[1]-Ps_log[0])/np.log(10)
-            hdu1.header['CTYPE2'] = 'log10(pressure) [dyne/cm^2]'
-            hdu1.header['EXTNAME'] = 'rho [g/cm**3]'
-            hdu2 = pyfits.ImageHDU(Ui_tab)
-            hdu2.header['EXTNAME'] = 'Ui [erg/g]'
-            hdu3 = pyfits.ImageHDU(mu_tab)
-            hdu3.header['EXTNAME'] = 'mu'
-            hdu4 = pyfits.ImageHDU(ns_tab)
-            hdu4.header['EXTNAME'] = 'ns [cm^-3]'
-            hdu5 = pyfits.ImageHDU(n_e_tab)
-            hdu5.header['EXTNAME'] = 'n_e [cm^-3]'
-            hdu6 = pyfits.ImageHDU(Q_tab)
-            hdu6.header['EXTNAME'] = 'Q'
-            hdu7 = pyfits.ImageHDU(cP_tab)
-            hdu7.header['EXTNAME'] = 'cP [erg/K/g]'
-            hdulist = pyfits.HDUList([hdu1, hdu2, hdu3, hdu4, hdu5,hdu6,hdu7])
-            hdulist.writeto(savefile, overwrite=True)
+        hdu1 = pyfits.PrimaryHDU(rho_tab)
+        hdu1.header['CRVAL1'] = Ts[0].cgs.value
+        hdu1.header['CDELT1'] = (Ts[1]-Ts[0]).cgs.value
+        hdu1.header['CTYPE1'] = 'Temperature [K]'
+        hdu1.header['CRVAL2'] = (Ps_log[0])/np.log(10)
+        hdu1.header['CDELT2'] = (Ps_log[1]-Ps_log[0])/np.log(10)
+        hdu1.header['CTYPE2'] = 'log10(pressure) [dyne/cm^2]'
+        hdu1.header['EXTNAME'] = 'rho [g/cm**3]'
+        hdu2 = pyfits.ImageHDU(Ui_tab)
+        hdu2.header['EXTNAME'] = 'Ui [erg/g]'
+        hdu3 = pyfits.ImageHDU(mu_tab)
+        hdu3.header['EXTNAME'] = 'mu'
+        hdu4 = pyfits.ImageHDU(ns_tab)
+        hdu4.header['EXTNAME'] = 'ns [cm^-3]'
+        hdu5 = pyfits.ImageHDU(n_e_tab)
+        hdu5.header['EXTNAME'] = 'n_e [cm^-3]'
+        hdu6 = pyfits.ImageHDU(Q_tab)
+        hdu6.header['EXTNAME'] = 'Q'
+        hdu7 = pyfits.ImageHDU(cP_tab)
+        hdu7.header['EXTNAME'] = 'cP [erg/K/g]'
+        hdulist = pyfits.HDUList([hdu1, hdu2, hdu3, hdu4, hdu5,hdu6,hdu7])
+        hdulist.writeto(savefile, overwrite=True)
     return rho_tab, Ui_tab, mu_tab, ns_tab
  
 if __name__=='__main__':
