@@ -38,7 +38,7 @@ f_const = (np.pi*c.e.gauss**2/c.m_e/c.c).cgs.value  # Used in line calcs.
 ev_kB_cgs = (1*u.eV/c.k_B).cgs.value
 
  #Element abundances
-abund, masses, n_p, ionI, ionII, gI, gII, gIII, elt_names = eos.solarmet()
+abund, masses, n_p, ionI, ionII, gI, gII, gIII, elt_names = eos.composition()
 
 nelt = len(abund)
 # Read on strong_lines and weak_lines files

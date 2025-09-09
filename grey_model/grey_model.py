@@ -12,7 +12,7 @@ import utils
 
 class GreyModel(object):
 
-    def __init__(self, Teff=0, Tirr=6500, g=2288, r=c.R_sun, D=7.78*1e12):
+    def __init__(self, Teff=124.4, Tirr=6500, g=2288, r=c.R_sun, D=7.78*1e12):
         # setting quantities with units
         self.Teff = Teff * u.K
         self.Tirr = Tirr * u.K
@@ -189,9 +189,9 @@ class GreyModel(object):
 if __name__ == "__main__":
     model = GreyModel()
     spec = model.spectrum(profile=False)
+
+    plt.figure(figsize=(10,5))
     plt.plot((c.c/model.freqs).to_value(u.um), spec)
-    plt.xscale('log')
-    plt.yscale('log')
     plt.xlabel('Wavelength (um)')
     plt.ylabel(r'$F_\nu$ (cgs)')
     plt.title('Emergent Spectrum')

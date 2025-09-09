@@ -21,27 +21,25 @@ eV_Boltzmann_const = (u.eV/c.k_B).cgs.value
 deybe_const = (c.k_B/8/np.pi/c.e.esu**2).cgs.value
 delchi_const = (c.e.esu**2/(1*u.eV)).cgs.value
 
-def solarmet():
-    """Return solar metalicity abundances by number and masses for low mass elements.
-    From Asplund et al (2009), up to an abundance of 1e-5 only plus Na, K, Ca. 
-    Degeneracy and ionization energies from IA05 in Scholz code"""
-    elt_names = np.array(['H', 'He',   'C',   'N',   'O',   'Ne',  'Na',   'Mg',   'Al',  'Si',  'S',   'Cl', 'K',   'Ca', 'Ti', 'Cr', 'Mn', 'Fe', 'Co', 'Ni'])
-    n_p =        np.array([1,   2,      6,     7,     8,     10,    11,     12,      13,    14,   16,     17,  19,     20,   22,   24,   24,   26,   27,  28 ])
-    masses=      np.array([1.0, 4.0,    12.01, 14.01, 16.00, 18.0,  22.99, 24.31, 26.98, 28.09, 32.06, 35.45, 39.10,40.08, 47.87, 52.0, 54.94, 55.85, 58.93,63.55])
-    abund = 10**(np.array([12, 10.93,   8.43,  7.83,  8.69,  7.93,  6.24,  7.60,   6.43,  7.51,  7.12,  5.31,  5.03, 6.30,  4.97, 5.62, 5.42, 7.46, 4.94, 6.20])-12)
-    ionI  =      np.array([13.595,24.58,11.26, 14.53, 13.61, 21.56, 5.14,  7.644,  5.98,  8.149,10.36, 13.01, 4.339,6.111, 6.80, 6.74, 6.76, 7.87, 7.88 ,7.63])
-    ionII  =     np.array([-0.754,  54.403,  24.376,29.593,35.108,40.96, 47.29, 15.03, 18.82,  16.34, 23.40,23.80, 31.81,11.87, 13.57, 16.49, 15.64,16.18, 17.08, 18.15])
+def composition():
+    """Return Jupiter's atmospheric composition, according to Opik (1962)"""
+    elt_names = np.array(['H', 'He', 'Ne', 'CH4', 'NH3'])
+    n_p = np.array([1, 2, 10, 10, 10])
+    masses = np.array([1.0, 4.0, 18.0, 16.04, 17.03])
+    abund = np.array([0.023, 0.972, 0.0039, 0.00063, 0.000029])
+    ionI = np.array([13.595, 24.58, 21.56, 12.61, 10.07])
+    ionII = np.array([-0.754, 54.403, 40.96, 24.59, 14.95])
 
     #Degeneracy of many of these elements are somewhat temperature-dependent,
     #as it is really a partition function. But as this is mostly H/He plus 
     #other elements as a mass reservoir and source of low-T
     #electrons, we're ignoring this. 
-    gI =   np.array([2,1,9,4,9,1,2,1,6,9,9,6,2,1,21,7,6,25,25,21])
-    gII =  np.array([1,2,6,9,4,6,1,2,1,6,4,9,1,2,28,6,7,30,30,10])
+    gI =   np.array([2,1,2,1,1])
+    gII =  np.array([1,2,2,3,1])
 
     #A lot of these degeneracies are educated guesses! But we're not worried
     #about most elements in the doubly ionized state. The last 5 are made up.
-    gIII = np.array([1,1,1,6,9,9,6,1,2,1,9,9,6,1,25,10,10,10,10,10])
+    gIII = np.array([1,1,6,2,2])
 
     return abund, masses, n_p, ionI, ionII, gI, gII, gIII, elt_names
         
@@ -67,7 +65,7 @@ def saha(n_e, T):
     """
     
     #Input the abundances of the elements
-    abund, masses, n_p, ionI, ionII, gI, gII, gIII, elt_names  = solarmet()
+    abund, masses, n_p, ionI, ionII, gI, gII, gIII, elt_names  = composition()
     n_elt = len(n_p)
     
     #Find the Deybe length, and the decrease in the ionization potential in eV, 
@@ -155,11 +153,7 @@ def saha(n_e, T):
     
     #mu is mean "molecular" weight, and we make the approximation that
     #electrons have zero weight.
-    mu = np.sum(abund*masses)/(np.sum(abund) + f_e)
-    # Safeguard: prevent mu from being zero or negative
-    if mu <= 0 or not np.isfinite(mu):
-        mu = 1e-10  # set to a small positive value
-        warnings.warn("Mean molecular weight (mu) became zero or non-finite; set to small positive value.")
+    mu = 4.3
     
     #Finally, we should compute the internal energy with respect to neutral gas.
     #This is the internal energy per H atom, divided by the mass in grams per H atom. 
@@ -340,7 +334,7 @@ if __name__=='__main__':
     rho, mu, Ui, ns = saha(1e18, 50000)
     
     #Now the calculations
-    abund, masses, n_p, ionI, ionII, gI, gII, gIII, elt_names  = solarmet()
+    abund, masses, n_p, ionI, ionII, gI, gII, gIII, elt_names  = composition()
     np.set_printoptions(formatter={'float_kind':"{:.2f}".format})
     print("Hydrogen Ionisation Fraction: {:.4f}".format(ns[1]/(ns[0] + ns[1])))
     print("Neutral, 1st ionisation, 2nd ionisation fraction of other elements: ")
