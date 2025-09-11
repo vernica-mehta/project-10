@@ -20,13 +20,14 @@ def dP_dTau(tau, P, tau_grid, T_grid, g, f_kappa):
 	kappa_bar = f_kappa((np.log10(P), T))
 	return g / kappa_bar
     
-def planck(nu, T):
+def planck(lam, T):
 
-	p1 = (2*c.h*nu**3) / (c.c**2)
-	p2 = np.exp((c.h*nu)/(c.k_B*T)) - 1
+	lam = lam.to(u.m)
+	p1 = (2*c.h*c.c**2) / (lam**5)
+	p2 = np.expm1((c.h*c.c)/(lam*c.k_B*T))
 
-	return (p1/p2).cgs
+	return (p1/p2)
 
-def irradiation(r, D, nu, Tirr):
+def irradiation(r, D, lam, Tirr):
 	dist = (r/D)**2
-	return dist * planck(nu, Tirr).cgs
+	return dist * planck(lam, Tirr)

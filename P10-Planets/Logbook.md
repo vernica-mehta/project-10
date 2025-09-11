@@ -38,3 +38,15 @@ We have broken the next part of the project down into three components for us to
 - Griffin: finish the code for `T_tau`, where an input tau grid outputs temperature
 - Vernica: look into $\tau_H$ and apply this to the function, testing the `structure.py` code to get some initial model results
 - Nathan: look beyond the grey atmosphere model, into what we need to do to model non-grey atmosphere
+
+## 11 - 09 - 2025 - notes from group meeting
+
+Realised a couple of issues with grey model:
+
+- kappa function defined in existing opac code done from only hydrogen but planet atmosphere mostly helium
+  - need to redefine opacity function from first principle i.e. abundance * column density of species
+- picket fence model for non-grey atmosphere
+  - different way of defining T_Tau, much easier and computationally more viable than defining each individual absorption line
+  - will also come up with opacities for non-grey model
+
+For Tuesday, we have divided these two tasks up between the three of us, to try to get closer to a finished grey model and then make some steps towards the non-grey model.
