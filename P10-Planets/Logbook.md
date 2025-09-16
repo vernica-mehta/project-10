@@ -50,3 +50,10 @@ Realised a couple of issues with grey model:
   - will also come up with opacities for non-grey model
 
 For Tuesday, we have divided these two tasks up between the three of us, to try to get closer to a finished grey model and then make some steps towards the non-grey model.
+
+
+# 16-9-2025 - notes from group meeting and questions for Mike
+
+Solved issue Vernica was having with the Planck function and the irradiated spectrum. Opted to use a closer distance to the star to simulate a hot jupiter due to the irradiation of jupiter being negligible.
+
+Nathan explained the non-grey model, confusion is around the picket fence model and the thermal opacities. The model can be coded up to take the irradiated temperature and the visual opacities. We can manipulate the ratio of thermal opacities (i.e. $R = \kappa_1/\kappa_2$ which are the picket fence opacities $\kappa_1$ and $\kappa_2$) to see how this affects the temperature profile of the planet. 
