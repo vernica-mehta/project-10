@@ -7,12 +7,12 @@ from scipy.interpolate import RegularGridInterpolator
 from scipy.integrate import solve_ivp, cumulative_trapezoid
 import opac
 from scipy.special import expn
-import sys, time
+import sys
 import utils
 
 class GreyModel(object):
 
-    def __init__(self, Teff=124.4, Tirr=6500, g=2288, r=c.R_sun, D=7.78*1e12):
+    def __init__(self, Teff=1500, Tirr=6500, g=2288, r=c.R_sun, D=7.78*1e5):
         # setting quantities with units
         self.Teff = Teff * u.K
         self.Tirr = Tirr * u.K
@@ -51,16 +51,12 @@ class GreyModel(object):
             print("[GreyModel] load_opacities: Using cached result.", file=sys.stderr)
             return self._opacities
         print("[GreyModel] load_opacities: Opening Ross_Planck_opac.fits...", file=sys.stderr)
-        t0 = time.time()
         f_kappa = fits.open('Ross_Planck_opac.fits')
         kappa = f_kappa['kappa_Ross [cm**2/g]'].data
-        print(f"[GreyModel] load_opacities: Opened Ross_Planck_opac.fits in {time.time()-t0:.2f} s", file=sys.stderr)
 
         print("[GreyModel] load_opacities: Opening rho_Ui_mu_ns_ne.fits...", file=sys.stderr)
-        t1 = time.time()
         f_eos = fits.open('rho_Ui_mu_ns_ne.fits')
         rho = f_eos['rho [g/cm**3]'].data
-        print(f"[GreyModel] load_opacities: Opened rho_Ui_mu_ns_ne.fits in {time.time()-t1:.2f} s", file=sys.stderr)
 
         print("[GreyModel] load_opacities: Setting up grids and interpolators...", file=sys.stderr)
         h = f_kappa[0].header
@@ -72,7 +68,6 @@ class GreyModel(object):
         f_rho_interp = RegularGridInterpolator((Ps_log10, T_grid), rho, bounds_error=False, fill_value=None)
 
         print("[GreyModel] load_opacities: Solving ODE for pressure profile...", file=sys.stderr)
-        t2 = time.time()
         sol = solve_ivp(
             utils.dP_dTau,
             [0, 10**7],
@@ -81,7 +76,6 @@ class GreyModel(object):
             t_eval=self.tau_h,
             method='LSODA'
         )
-        print(f"[GreyModel] load_opacities: ODE solve finished in {time.time()-t2:.2f} s", file=sys.stderr)
 
         Ps = sol.y[0] * u.dyn / u.cm**2
         Ts = self.T_tau
@@ -99,10 +93,7 @@ class GreyModel(object):
     def apply_opacs(self):
 
         print("[GreyModel] apply_opacs: Loading opacities...", file=sys.stderr)
-        t1 = time.time()
         Ps, Ts, rhos, kappa_bars = self.load_opacities()
-        print(f"[GreyModel] apply_opacs: Loaded opacities in {time.time()-t1:.2f} s", file=sys.stderr)
-
         n_freq = len(self.freqs)
         n_tau = len(self.tau_h)
         log10P_arr = np.log10(Ps.to_value(u.dyn / u.cm**2))
@@ -116,12 +107,11 @@ class GreyModel(object):
         ], axis=1)
 
         print(f"[GreyModel] spectrum: Calculating tau_nu for {n_freq} frequencies...", file=sys.stderr)
-        t4 = time.time()
         tau_nu_mat = np.array([
             cumulative_trapezoid(kappa_nu_bars[i]/kappa_bars, x=self.tau_h, initial=0)
             for i in range(n_freq)
         ])
-        print(f"[GreyModel] spectrum: tau_nu done in {time.time()-t4:.2f} s", file=sys.stderr)
+        print(f"[GreyModel] spectrum: tau_nu done", file=sys.stderr)
 
         return T_arr, n_tau, tau_nu_mat
 
@@ -137,33 +127,32 @@ class GreyModel(object):
             ], axis=1)
         elif which == "incoming":
             print(f"[GreyModel] spectrum: Calculating Irradiation function for {n_tau} tau points...", file=sys.stderr)
-            T_irr = np.ones_like(T_arr) * self.Tirr.value
+            T_irr = np.ones_like(T_arr) * self.Tirr.value / len(T_arr)
             spec = np.stack([
                 utils.irradiation(self.r, self.D, self.freqs, T_irr[j])
                 for j in range(n_tau)
             ], axis=1)
 
         print(f"[GreyModel] spectrum: Computing final vectorized sum...", file=sys.stderr)
-        t5 = time.time()
         expn3_0 = expn(3, 0)
         expn4_mat = expn(4, tau_nu_mat)
+        expn4_mat = np.where(np.isnan(expn4_mat), 0, expn4_mat)
         dSlambda = spec[:,1:] - spec[:,:-1]
         dtau_nu = tau_nu_mat[:,1:] - tau_nu_mat[:,:-1]
         dexp = expn4_mat[:,:-1] - expn4_mat[:,1:]
         dtau_nu = np.where(dtau_nu == 0, 1e-30, dtau_nu)
         sum_term = np.sum((dSlambda/dtau_nu) * dexp, axis=1)
         self.spectrum = 0.5 * (spec[:,0]*expn3_0 + sum_term)
-        print(f"[GreyModel] spectrum: Final sum done in {time.time()-t5:.2f} s", file=sys.stderr)
 
-        return self.spectrum, spec
+        return self.spectrum
     
     @property
     def local_spectrum(self):
-        return self.make_spec("internal")[1]
+        return self.make_spec("internal")
     
     @property
     def irradiated_spectrum(self):
-        return self.make_spec("incoming")[1]
+        return self.make_spec("incoming")
     
     @property
     def final_spectrum(self):
