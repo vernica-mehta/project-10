@@ -57,3 +57,82 @@ For Tuesday, we have divided these two tasks up between the three of us, to try 
 Solved issue Vernica was having with the Planck function and the irradiated spectrum. Opted to use a closer distance to the star to simulate a hot jupiter due to the irradiation of jupiter being negligible.
 
 Nathan explained the non-grey model, confusion is around the picket fence model and the thermal opacities. The model can be coded up to take the irradiated temperature and the visual opacities. We can manipulate the ratio of thermal opacities (i.e. $R = \kappa_1/\kappa_2$ which are the picket fence opacities $\kappa_1$ and $\kappa_2$) to see how this affects the temperature profile of the planet. 
+
+##### Griffin questions and clarifications for mike: 
+In the saha code how are we supposed to know what is being calculated ? 
+eg:
+where comment in code is:
+- ns: A vector of number densities of H, H+, H-, He, He+, He++ in cm^{-3} 
+
+So for ns: does that mean it calculates H, H+, H-, He, He+ and He++ and nothing else ? Does it calculate He- or is H- just a special case and what about the rest of the elements ?
+(does the saha equation calculate He- ?)
+
+Also I rembered that in class mike mentioned something about the saha equation being a bit more complicated for molecules [[@soaresNonGaussianThermostatisticalConsiderations2019]] so I went looking and turns out that: "Molecules and molecular ions have other degrees of freedom, like vibration and rotation. Because of that the equation needs to be modified in such a way to take these features into account."
+will ask mike and group about saha equation because I think i remember mention of there already being a complex saha equation available 
+
+kappa_cont_H and kappa_cont seem to do pretty much the same thing is that true or am I missing something obvious ? 
+
+My understanding is that for the non grey atmosphere the major part of that will be adjusting the ratio of thermal opacities to visuals,
+Are the kappas only related to planet thermal opacties or are they influenced by the irraition as well ? 
+$$
+T^{4}(\tau_{H})= \frac{\kappa_j}{\kappa_b}\frac{3}{4}T_{eff}^4 (\tau_H+\frac{1}{\sqrt{3}}+\frac{4W}{3}(\frac{T_{irr}}{T_{eff}})^4)
+$$
+
+This mess of drawings came from me clarifying my understanding on the non-grey atmosphere and grey atmosphere. As well as my understanding on opacities. And dicussion with Maya about calculating line opacities. 
+
+![[Untitled Notebook-2.jpg]]
+
+![[Untitled Notebook-3.jpg]]
+![[Untitled Notebook-4.jpg]]
+
+My understanding of the opacties now:
+
+Continuum opacities they make up the shape of the line and they are the built from the addition of each elements Ionisation transitions and bound-bound transitions
+
+As getting absorption lines one why historically and suggested during our conversation was the random bands model where lines were randomly placed to approximate low-res spectra.
+
+Now If we wanted to do it properly we would have to solve the radiation transport equation numerically. 
+
+But possibly a simpler way to do it due to the time constraints would be to just calculate the major lines individually. 
+
+My understanding on how the simplest way to do that would be using beer lambert's law where: 
+
+Light of wavelength $\lambda$ traversing an absorbing column obeys
+$$
+
+I(\lambda) = I_0(\lambda)*(1 - exp(-\tau(\lambda)))
+
+$$
+where
+$$
+
+\tau(\lambda) \;=\;\int_{z_0}^{\infty} \sigma\!\bigl(\lambda,T(z)\bigr)\,n(z)\,dz
+
+\quad\bigl[\text{dimensionless}\bigr].
+
+$$
+
+* $( I_0(\lambda) )$ – incident irradiance at the cloud‑top interface.
+
+* $( \sigma(\lambda,T) cm^{2})$ – monochromatic absorption cross‑section (lab‑derived).
+
+* $( n(z) ,[\mathrm{cm^{-3}}] )$ – number density profile of the coulmn density from literature 
+
+* $( \tau )$ – optical depth 
+
+And we can calculate this for each line. 
+
+For our crossections databases we can use to get the absorption crossections for the lines come from: 
+
+- **HITRAN** (300 K, IR focus; now expanded to other temps/wavelengths).
+- **HITEMP** (high-T extension of HITRAN).
+
+Note -> in my original conversation in the notes above I thought we would be calculating kappa which would then use in our temp profile but I think now the kappa_j and kappa_b are to do with the planets own thermal opacities ????? 
+
+Is that right ? 
+
+On this note I had: 
+>[!note]
+>Not to sure what to do with the strong line and weak line functions and for now I am going to wait till class to do either He- or He++ as I am not to sure what one. 
+
+I assume its function is to calculate the lines in a more in depth manor then what I suggested above. 
