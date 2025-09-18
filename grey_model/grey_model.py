@@ -2,6 +2,15 @@
 # calculates the planetary spectrum using a grey atmosphere model
 # based on code from various sources referenced within and astr4022 class code
 
+"""
+To get the opacities, in interactive python run:
+
+from grey_model import GreyModel
+model = GreyModel()
+model.kappa_ross
+model.kappa_visual
+"""
+
 #imports
 import numpy as np
 import matplotlib.pyplot as plt
@@ -124,6 +133,15 @@ class GreyModel(object):
         self._opacities = (Ps, Ts, rhos, kappa_bars)
         return self._opacities
 
+    @property
+    def kappa_ross(self):
+        """Get cached opacities or compute them if not already done."""
+        if self._opacities is None:
+            self.load_opacities()
+
+        kappa = self._opacities[2] * self._opacities[3]  # element-wise multiplication
+            return kappa
+
     def apply_opacs(self):
         """Apply opacities to compute frequency-dependent optical depth profiles.
         
@@ -147,7 +165,7 @@ class GreyModel(object):
 
         # opacity matrix, using continuum opacities defined in opac.py
         self.vprint(f"[GreyModel] apply_opacs: Calculating kappa_nu_bars for {n_tau} tau points...")
-        kappa_nu_bars = np.stack([
+        self._kappa_nu_bars = np.stack([
             opac.kappa_cont(self.freqs.to_value(u.Hz), log10P_arr[j], T_arr[j]) / rhos[j]
             for j in range(n_tau)
         ], axis=1)
@@ -155,12 +173,16 @@ class GreyModel(object):
         # optical depth matrix via integration of opacities over initial tau grid
         self.vprint(f"[GreyModel] spectrum: Calculating tau_nu for {n_freq} frequencies...")
         tau_nu_mat = np.array([
-            cumulative_trapezoid(kappa_nu_bars[i]/kappa_bars, x=self.tau_h, initial=0)
+            cumulative_trapezoid(self._kappa_nu_bars[i]/kappa_bars, x=self.tau_h, initial=0)
             for i in range(n_freq)
         ])
         self.vprint(f"[GreyModel] spectrum: tau_nu done")
 
         return T_arr, n_tau, tau_nu_mat
+
+    @property
+    def kappa_visual(self):
+        return self._kappa_nu_bars
 
     def make_spec(self, which):
         """Calculate the emergent spectrum, either local or irradiated.
