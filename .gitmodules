@@ -1,3 +1,6 @@
 [submodule "astr4022"]
 	path = astr4022
 	url = git@github.com:mikeireland/astr4022.git
+[submodule "PyExoCross"]
+	path = PyExoCross
+	url = git@github.com:Beryl-Jingxin/PyExoCross.git

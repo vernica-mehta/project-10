@@ -13,6 +13,8 @@ model.kappa_visual
 
 #imports
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
 from astropy.io import fits
 import astropy.constants as c
@@ -25,7 +27,7 @@ import utils, opac # local files
 
 class GreyModel(object):
 
-    def __init__(self, Teff=144, Tirr=6500, g=2288, r=c.R_sun.value, D=7.78*1e12, verbose=False):
+    def __init__(self, Teff=144, Tirr=6500, g=2288, kappa_ratio=1, r=c.R_sun.value, D=7.78*1e12, verbose=False):
         """Initialise pseudo-grey atmosphere model. Defaults from Jupiter and the Sun.
 
         PARAMETERS
@@ -48,6 +50,7 @@ class GreyModel(object):
         self.Teff = Teff * u.K
         self.Tirr = Tirr * u.K
         self.g = g * u.cm / u.s**2
+        self.kappa_ratio = kappa_ratio
         self.r = r * u.m
         self.D = D * u.m
 
@@ -55,7 +58,7 @@ class GreyModel(object):
         self.tau_h = np.logspace(-6,6,50)
 
         # frequency and wavelength grids
-        wavs = np.linspace(1,200,1000) * u.um
+        wavs = np.linspace(5,200,1000) * u.um
         self.freqs = (c.c / wavs).to(u.Hz)
 
         # cache for opacities and spectrum
@@ -67,7 +70,7 @@ class GreyModel(object):
     @property
     def T_tau(self):
         """Calculate temperature profile as a function of optical depth."""
-        return utils.T_tau(self.tau_h, self.Teff, self.Tirr, 1, 1, 1/2, self.r, self.D)
+        return utils.T_tau(self.tau_h, self.Teff, self.Tirr, self.kappa_ratio, 1/2, self.r, self.D)
 
     def load_opacities(self):
         """Load opacity and EOS data, solve for pressure profile, and interpolate opacities.
@@ -140,7 +143,7 @@ class GreyModel(object):
             self.load_opacities()
 
         kappa = self._opacities[2] * self._opacities[3]  # element-wise multiplication
-            return kappa
+        return kappa
 
     def apply_opacs(self):
         """Apply opacities to compute frequency-dependent optical depth profiles.
@@ -227,7 +230,7 @@ class GreyModel(object):
         sum_term = np.sum((dSlambda/dtau_nu) * dexp, axis=1)
         self.spectrum = 0.5 * (spec[:,0]*expn3_0 + sum_term)
 
-        return self.spectrum
+        return 4*np.pi*self.spectrum
     
     @property
     def local_spectrum(self):
@@ -253,13 +256,14 @@ if __name__ == "__main__":
     irr = model.irradiated_spectrum
 
     plt.figure(figsize=(10,5))
-    plt.plot((c.c/model.freqs).to_value(u.um), spec, 'k', linewidth=2, label='Total Spectrum')
-    plt.plot((c.c/model.freqs).to_value(u.um), local, 'r', linewidth=1, label='Local Emission', linestyle='--')
-    plt.plot((c.c/model.freqs).to_value(u.um), irr, 'b', linewidth=1, label='Irradiation', linestyle=':')
+    plt.semilogy((c.c/model.freqs).to_value(u.um), spec, 'gray', linewidth=2, label='Total Spectrum')
+    plt.semilogy((c.c/model.freqs).to_value(u.um), local, 'm', linewidth=1, label='Local Emission', linestyle='--')
+    plt.semilogy((c.c/model.freqs).to_value(u.um), irr, 'c', linewidth=1, label='Irradiation', linestyle=':')
     plt.xlabel('Wavelength (um)')
     plt.ylabel(r'$F_\nu$ (cgs)')
     plt.title('Emergent Spectrum')
     plt.legend()
     plt.grid()
     plt.savefig('spectrum.png', dpi=200, bbox_inches='tight')
-    plt.show()
+    print("Spectrum saved as 'spectrum.png'")
+    # plt.show()  # Commented out for non-interactive environments

@@ -157,7 +157,7 @@ def saha(n_e, T):
     
     #Finally, we should compute the internal energy with respect to neutral gas.
     #This is the internal energy per H atom, divided by the mass in grams per H atom. 
-    Ui=(ns[1]*13.6 + ns[3]*24.58 + ns[4]*(54.403+24.58))*u.eV/n_h/np.sum(abund*masses*u.u);
+    Ui=(ns[1]*13.6 + ns[3]*24.58 + ns[4]*(54.403+24.58))*u.eV/n_h/np.sum(abund*masses*u.u)
     
     return rho_cgs, mu, Ui, ns
     

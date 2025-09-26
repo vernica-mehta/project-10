@@ -319,6 +319,80 @@ def Hff(nu, T):
     T_val = T.to_value(u.K) if hasattr(T, 'unit') else T
     return Hff_const /nu_val**3/np.sqrt(T_val)
 
+def HeIbf(nu, T):
+
+    import astropy.constants as c
+
+    h_kB_cgs = (c.h/c.k_B).cgs.value
+
+    """Compute the Helium bound-free cross sections in cgs units as a
+    function of temperature in K. Computed per atom. Computed using:
+    https://articles.adsabs.harvard.edu/pdf/1970SAOSR.309.....K
+    
+    Parameters
+    ----------
+    nu: Frequency or a list (numpy array) of frequencies.
+    """
+    he_level =[# Level 1: 1S 
+    [1,1,0.0,5.9447e15,[33.32,-2.0]],
+    # Level 2: 2^3S  
+    [2,3,19.819,1.1526e15,[-390.026,21.035,-0.318]],
+    # Level 3: 2^1S 
+    [3,1,20.615,0.96025e15,[26.83,-1.91]],
+    # Level 4: 2^3P^0 
+    [4,9,20.964,0.87607e15,[61.21,-2.9]],
+    # Level 5: 2^1P^0 
+    [5,3,21.217,0.81465e15,[81.35,-3.5]],
+    # Level 6: 3^3S 
+    [6,3,22.718,0.4519e15,[12.69,-1.54]],
+    # Level 7: 3^1S 
+    [7,1,22.920,0.4031e15,[23.85,-1.86]],
+    # Level 8: 3^3P^0 
+    [8,9,23.006,0.3821e15,[49.30,-2.60]],
+    # Level 9: 3^3D+3^1D 
+    [9,20,23.073,0.3659e15,[85.20,-3.69]],
+    # Level 11: 3^1P^0 
+    [11, 3, 23.086, 0.3628e15, [58.81, -2.89]]]
+
+
+
+    nu_val = nu.to_value(u.Hz) if hasattr(nu, 'unit') else nu
+    T_val = T.to_value(u.K) if hasattr(T, 'unit') else T
+    alpha = np.zeros_like(nu_val)
+    ev_kB_cgs = (1*u.eV/c.k_B).cgs.value
+
+    
+    for i in range(0,len(he_level)):
+        level = he_level[i][0]
+        g_i = he_level[i][1]
+        E_i_eV = he_level[i][2]
+        nu_threshold = he_level[i][3]
+        ln_a_i = he_level[i][4]
+
+        mask = nu_val >= nu_threshold
+
+        nu_masked = nu_val[mask]
+
+        if len(ln_a_i) == 2:
+            a = ln_a_i[0]
+            b = ln_a_i[1]
+            ln_a = a + b * np.log(nu_masked)
+        else:
+            a = ln_a_i[0]
+            b = ln_a_i[1]
+            c = ln_a_i[2]
+            ln_a = a + (b+c * np.log(nu_masked))*np.log(nu_masked)
+
+        # Note question for higher levels -> do I need to do n=> 4 differently 
+
+        cross_section = np.exp(ln_a)
+        boltzmann_factor = g_i * np.exp(-E_i_eV * ev_kB_cgs / T_val)
+        
+        # total crossection 
+        alpha[mask] += cross_section * boltzmann_factor
+    
+    return alpha * (1-np.exp(-h_kB_cgs*nu_val/T_val))
+
 def kappa_cont(nu, log10P, T):
     """Compute the continuum opacity in cgs units as a function of
     log pressure (CGS) and K.
@@ -332,17 +406,24 @@ def kappa_cont(nu, log10P, T):
     nHI = 10**(log10ns[0](log10P, T_val, grid=False))
     nHII = 10**(log10ns[1](log10P, T_val, grid=False))
     nHm = 10**(log10ns[2](log10P, T_val, grid=False))
+
+    nHeI = 10**(log10ns[3](log10P, T_val, grid=False)) #He 
+
+    HeIff = Hff(nu, T_val) 
+
     ne = 10**(log10ne(log10P, T_val, grid=False))
     kappa = nHI * Hbf(nu, T_val) + nHII * ne * Hff(nu, T_val) + \
-        nHm * Hmbf(nu, T_val) + nHI * ne * Hmff(nu, T_val)
+        nHm * Hmbf(nu, T_val) + nHI * ne * Hmff(nu, T_val) + \
+        nHeI*HeIbf(nu, T_val) + nHeI*HeIff*ne
     return kappa
 
-def kappa_cont_H(nu, T, nHI, nHII, nHm, ne):
+def kappa_cont_H(nu, T, nHI, nHII, nHm, nHeI):
     """Compute the continuum opacity in cgs units as a function of
     temperature in K and number densities.
     """
     kappa = nHI * Hbf(nu, T) + nHII * ne * Hff(nu, T) + \
-            nHm * Hmbf(nu, T) + nHI * ne * Hmff(nu, T)
+            nHm * Hmbf(nu, T) + nHI * ne * Hmff(nu, T) + \
+            nHeI*HeIbf(nu, T) + nHeI*Hff(nu, T)*ne
     return kappa
 
 if __name__=="__main__":
@@ -359,6 +440,7 @@ if __name__=="__main__":
             nHI = f_eos['ns [cm^-3]'].data[i,j,0]
             nHII = f_eos['ns [cm^-3]'].data[i,j,1]
             nHm = f_eos['ns [cm^-3]'].data[i,j,2]
+            nHeI = f_eos['ns [cm^-3]'].data[i,j,3]
             ne = f_eos['n_e [cm^-3]'].data[i,j]
             # Compute the volume-weighted absorption coefficient, using Hydrogen
             kappa = kappa_cont_H(nu, T, nHI, nHII, nHm, ne)
