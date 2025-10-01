@@ -14,7 +14,6 @@ model.kappa_visual
 #imports
 import numpy as np
 import matplotlib
-matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
 from astropy.io import fits
 import astropy.constants as c
@@ -58,7 +57,7 @@ class GreyModel(object):
         self.tau_h = np.logspace(-6,6,50)
 
         # frequency and wavelength grids
-        wavs = np.linspace(5,200,1000) * u.um
+        wavs = np.linspace(1,200,1000) * u.um
         self.freqs = (c.c / wavs).to(u.Hz)
 
         # cache for opacities and spectrum
@@ -248,22 +247,5 @@ class GreyModel(object):
         return self.local_spectrum + self.irradiated_spectrum
     
 if __name__ == "__main__":
-    """Run the grey atmosphere model and plot the emergent spectrum."""
 
-    model = GreyModel()
-    spec = model.final_spectrum
-    local = model.local_spectrum
-    irr = model.irradiated_spectrum
-
-    plt.figure(figsize=(10,5))
-    plt.semilogy((c.c/model.freqs).to_value(u.um), spec, 'gray', linewidth=2, label='Total Spectrum')
-    plt.semilogy((c.c/model.freqs).to_value(u.um), local, 'm', linewidth=1, label='Local Emission', linestyle='--')
-    plt.semilogy((c.c/model.freqs).to_value(u.um), irr, 'c', linewidth=1, label='Irradiation', linestyle=':')
-    plt.xlabel('Wavelength (um)')
-    plt.ylabel(r'$F_\nu$ (cgs)')
-    plt.title('Emergent Spectrum')
-    plt.legend()
-    plt.grid()
-    plt.savefig('spectrum.png', dpi=200, bbox_inches='tight')
-    print("Spectrum saved as 'spectrum.png'")
-    # plt.show()  # Commented out for non-interactive environments
+    pass

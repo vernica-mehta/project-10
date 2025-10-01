@@ -34,11 +34,11 @@ def T_tau(tau_h, Teff, Tirr, kappa_ratio, f, r, D):
 	"""  
 
 	W = f * (r/D)**2 # dilution factor
-	brackets = tau_h + 1/np.sqrt(3) + 4*W/3 * (Tirr/Teff)**4
 
 	if Teff == 0: # handle case of no internal heat
 		T = (kappa_ratio) * W * Tirr**4 * np.ones_like(tau_h)
 	else:
+		brackets = tau_h + 1/np.sqrt(3) + 4*W/3 * (Tirr/Teff)**4
 		T = (kappa_ratio) * 3/4 * Teff**4 * (brackets)
 
 	return (T**0.25).cgs
