@@ -141,7 +141,7 @@ class GreyModel(object):
         if self._opacities is None:
             self.load_opacities()
 
-        kappa = self._opacities[2] * self._opacities[3]  # element-wise multiplication
+        kappa = self._opacities[2] * self._opacities[3]
         return kappa
 
     def apply_opacs(self):
