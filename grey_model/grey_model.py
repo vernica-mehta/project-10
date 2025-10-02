@@ -13,8 +13,6 @@ model.kappa_visual
 
 #imports
 import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
 from astropy.io import fits
 import astropy.constants as c
 import astropy.units as u
@@ -22,11 +20,11 @@ from scipy.interpolate import RegularGridInterpolator
 from scipy.integrate import solve_ivp, cumulative_trapezoid
 from scipy.special import expn
 import sys
-import utils, opac # local files
+import utils, opac, abundances # local files
 
 class GreyModel(object):
 
-    def __init__(self, Teff=144, Tirr=6500, g=2288, kappa_ratio=1, r=c.R_sun.value, D=7.78*1e12, verbose=False):
+    def __init__(self, Teff=144, Tirr=6500, g=2288, kappa_ratio=1, r=c.R_sun.value, D=7.78*1e12, include_molecules=True, verbose=False):
         """Initialise pseudo-grey atmosphere model. Defaults from Jupiter and the Sun.
 
         PARAMETERS
@@ -64,6 +62,7 @@ class GreyModel(object):
         self._opacities = None
         self._spectrum = None
 
+        self.include_molecules = include_molecules
         self.vprint = print if verbose else lambda *args, **kwargs: None
 
     @property
@@ -167,10 +166,23 @@ class GreyModel(object):
 
         # opacity matrix, using continuum opacities defined in opac.py
         self.vprint(f"[GreyModel] apply_opacs: Calculating kappa_nu_bars for {n_tau} tau points...")
-        self._kappa_nu_bars = np.stack([
-            opac.kappa_cont(self.freqs.to_value(u.Hz), log10P_arr[j], T_arr[j]) / rhos[j]
-            for j in range(n_tau)
-        ], axis=1)
+        if self.include_molecules:
+            # Create molecular abundances for all layers at once
+            abund = [abundances.estimate_molecular_abundances(
+                T_arr[j], 10**log10P_arr[j]
+            ) for j in range(n_tau)]
+            
+            # Use molecular-enhanced opacity
+            self._kappa_nu_bars = np.stack([
+                opac.kappa_cont_molecules(self.freqs.to_value(u.Hz), log10P_arr[j], T_arr[j], abund[j]) / rhos[j]
+                for j in range(n_tau)
+            ], axis=1)
+        else:
+            # Use regular continuum opacity
+            self._kappa_nu_bars = np.stack([
+                opac.kappa_cont(self.freqs.to_value(u.Hz), log10P_arr[j], T_arr[j]) / rhos[j]
+                for j in range(n_tau)
+            ], axis=1)
 
         # optical depth matrix via integration of opacities over initial tau grid
         self.vprint(f"[GreyModel] spectrum: Calculating tau_nu for {n_freq} frequencies...")
