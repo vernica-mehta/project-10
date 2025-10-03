@@ -125,22 +125,12 @@ class MolecularLines:
                 
                 # Calculate opacity contribution with proper physical units
                 opacity_contribution = (number_density_val * line_strength_val * 
-                                      profile * 1e18)
-                
-                # Debug: print the first few contributions
-                if i < 3:
-                    print(f"[Debug] Line {i}: nu0={nu0:.2e} Hz, S={S:.2e}, boltzmann={boltzmann:.2e}")
-                    print(f"[Debug] line_strength_val={line_strength_val:.2e}")
-                    print(f"[Debug] number_density_val={number_density_val:.2e} cm^-3")
-                    print(f"[Debug] max(profile)={profile.max():.2e} Hz^-1")
-                    print(f"[Debug] max(opacity_contribution)={opacity_contribution.max():.2e}")
+                                      profile * 3e10)
                 
                 total_opacity += opacity_contribution
 
             print(f"[MolecularLines] {molecule}: Done processing {n_lines} lines")
-            print(f"[MolecularLines] {molecule}: Max opacity contribution: {np.max(total_opacity):.2e}")
-        
-        print(f"[MolecularLines] Total molecular opacity range: {total_opacity.min():.2e} - {total_opacity.max():.2e}")
+
         return total_opacity
     
     def get_molecular_mass(self, molecule):

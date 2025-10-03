@@ -441,14 +441,6 @@ def kappa_cont_molecules(nu, log10P, T, molecule_abundances=None):
             nu, T, P, molecule_abundances
         )
         
-        print(f"[OpacDebug] T={T}K, P={P:.2e}")
-        print(f"[OpacDebug] Continuum opacity range: {kappa_continuum.min():.2e} - {kappa_continuum.max():.2e}")
-        print(f"[OpacDebug] Molecular opacity range: {kappa_molecular.min():.2e} - {kappa_molecular.max():.2e}")
-        
-        # if kappa_molecular.max() > 0:
-        #     ratio = kappa_molecular.max() / kappa_continuum.max()
-        #     print(f"[OpacDebug] Max molecular/continuum ratio: {ratio:.2e}")
-        
         return kappa_continuum + kappa_molecular
     
     return kappa_continuum
