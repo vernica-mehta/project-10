@@ -28,7 +28,7 @@ C: From 61981 cm^-1
 N: From 83317
 S: From 55330
 """
-from grey_model.saha_eos import *
+from grey_model.old.saha_eos import *
 import astropy.units as u
 import astropy.constants as c
 from labellines import labelLines
