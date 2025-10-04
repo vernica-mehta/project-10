@@ -794,7 +794,7 @@ if __name__=='__main__':
     #Test 4: Make an equation of state table
     if True:
         Ps = np.logspace(-4,6,41)*u.dyn/u.cm**2
-        Ts = (2000 + 500*np.arange(47))*u.K
+        Ts = (500*np.arange(47))*u.K
         P_T_tables(Ps, Ts, savefile='rho_Ui_mu_ns_ne_Q_cP.fits')
         
         
