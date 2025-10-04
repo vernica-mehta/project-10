@@ -3,9 +3,10 @@ import astropy.constants as c
 import numpy as np
 from astropy.io import fits
 import matplotlib.pyplot as plt
-import saha_eos as eos
+#import grey_model.old.saha_eos as eos
 from scipy.interpolate import RectBivariateSpline
 from scipy.special import voigt_profile
+from molecular_lines import MolecularLines
 plt.ion()
 
 """
@@ -18,10 +19,10 @@ https://chiantipy.readthedocs.io/en/latest/
 https://chianti-atomic.github.io/api/ChiantiPy.core.html#id91
 http://spiff.rit.edu/classes/phys370/lectures/statstar/statstar_python3.py
 
-
-import saha_eos as eos
-_ = a = eos.P_T_tables(None, None, savefile='saha_eos.fits')
 """
+import eos as eos
+_ = a = eos.P_T_tables(None, None, savefile='saha_eos.fits')
+
 #From OCR online, from https://articles.adsabs.harvard.edu/pdf/1988A%26A...193..189J
 #A to F in columns, n=2 to 6 in rows
 Hmff_table = np.array(
@@ -416,6 +417,33 @@ def kappa_cont(nu, log10P, T):
         nHm * Hmbf(nu, T_val) + nHI * ne * Hmff(nu, T_val) + \
         nHeI*HeIbf(nu, T_val) + nHeI*HeIff*ne
     return kappa
+
+# Initialize molecular line data (do this once)
+csv_files = [
+    '20251002055928/20251002055928__1H2-16O__144.0K.csv',
+    '20251002055928/20251002055928__12C-1H4__144.0K.csv',
+    '20251002055928/20251002055928__14N-1H3__144.0K.csv'
+]
+molecular_lines = MolecularLines(csv_files)
+
+def kappa_cont_molecules(nu, log10P, T, molecule_abundances=None):
+    """
+    Enhanced continuum opacity including molecular lines
+    """
+    
+    # Get existing continuum opacity
+    kappa_continuum = kappa_cont(nu, log10P, T)
+    
+    # Add molecular lines if abundances provided
+    if molecule_abundances is not None:
+        P = 10**log10P
+        kappa_molecular = molecular_lines.compute_molecular_opacity(
+            nu, T, P, molecule_abundances
+        )
+        
+        return kappa_continuum + kappa_molecular
+    
+    return kappa_continuum
 
 def kappa_cont_H(nu, T, nHI, nHII, nHm, nHeI):
     """Compute the continuum opacity in cgs units as a function of
