@@ -89,11 +89,11 @@ class MolecularLines:
             n_lines = len(line_freqs)
             print(f"[MolecularLines] {molecule}: Processing {n_lines} lines...")
             
-            # Pre-calculate constants
+            # constants
             number_density_val = molecule_abundances[molecule].value if hasattr(molecule_abundances[molecule], 'value') else molecule_abundances[molecule]
             molecular_mass = self.get_molecular_mass(molecule)
             
-            # Pre-calculate Boltzmann factors for all lines (vectorized)
+            # Boltzmann factors for all lines
             kT_cgs = c.k_B.cgs.value * T / u.K # erg
             E_lower_erg = lower_energies.to_value(u.cm**-1) * c.h.cgs.value * c.c.cgs.value  # erg
             boltzmann_factors = np.exp(-E_lower_erg / kT_cgs)

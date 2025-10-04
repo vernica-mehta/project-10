@@ -418,33 +418,6 @@ def kappa_cont(nu, log10P, T):
         nHeI*HeIbf(nu, T_val) + nHeI*HeIff*ne
     return kappa
 
-# Initialize molecular line data (do this once)
-csv_files = [
-    '20251002055928/20251002055928__1H2-16O__144.0K.csv',
-    '20251002055928/20251002055928__12C-1H4__144.0K.csv',
-    '20251002055928/20251002055928__14N-1H3__144.0K.csv'
-]
-molecular_lines = MolecularLines(csv_files)
-
-def kappa_cont_molecules(nu, log10P, T, molecule_abundances=None):
-    """
-    Enhanced continuum opacity including molecular lines
-    """
-    
-    # Get existing continuum opacity
-    kappa_continuum = kappa_cont(nu, log10P, T)
-    
-    # Add molecular lines if abundances provided
-    if molecule_abundances is not None:
-        P = 10**log10P
-        kappa_molecular = molecular_lines.compute_molecular_opacity(
-            nu, T, P, molecule_abundances
-        )
-        
-        return kappa_continuum + kappa_molecular
-    
-    return kappa_continuum
-
 def kappa_cont_H(nu, T, nHI, nHII, nHm, nHeI):
     """Compute the continuum opacity in cgs units as a function of
     temperature in K and number densities.
