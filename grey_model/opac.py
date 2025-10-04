@@ -3,7 +3,7 @@ import astropy.constants as c
 import numpy as np
 from astropy.io import fits
 import matplotlib.pyplot as plt
-import saha_eos as eos
+#import grey_model.old.saha_eos as eos
 from scipy.interpolate import RectBivariateSpline
 from scipy.special import voigt_profile
 from molecular_lines import MolecularLines
@@ -19,10 +19,10 @@ https://chiantipy.readthedocs.io/en/latest/
 https://chianti-atomic.github.io/api/ChiantiPy.core.html#id91
 http://spiff.rit.edu/classes/phys370/lectures/statstar/statstar_python3.py
 
-
-import saha_eos as eos
-_ = a = eos.P_T_tables(None, None, savefile='saha_eos.fits')
 """
+import eos as eos
+_ = a = eos.P_T_tables(None, None, savefile='saha_eos.fits')
+
 #From OCR online, from https://articles.adsabs.harvard.edu/pdf/1988A%26A...193..189J
 #A to F in columns, n=2 to 6 in rows
 Hmff_table = np.array(
