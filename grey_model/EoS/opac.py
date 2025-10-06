@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 #import grey_model.old.saha_eos as eos
 from scipy.interpolate import RectBivariateSpline
 from scipy.special import voigt_profile
-from molecular_lines import MolecularLines
+from absorption_lines.molecular_lines import MolecularLines
 plt.ion()
 
 """

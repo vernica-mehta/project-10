@@ -2,15 +2,6 @@
 # calculates the planetary spectrum using a grey atmosphere model
 # based on code from various sources referenced within and astr4022 class code
 
-"""
-To get the opacities, in interactive python run:
-
-from grey_model import GreyModel
-model = GreyModel()
-model.kappa_ross
-model.kappa_visual
-"""
-
 #imports
 import numpy as np
 from astropy.io import fits
@@ -19,12 +10,12 @@ import astropy.units as u
 from scipy.interpolate import RegularGridInterpolator
 from scipy.integrate import solve_ivp, cumulative_trapezoid
 from scipy.special import expn
-import sys
-import utils, opac, abundances # local files
+import utils
+from EoS import opac
 
 class GreyModel(object):
 
-    def __init__(self, Teff=144, Tirr=6500, g=2288, kappa_ratio=1, r=c.R_sun.value, D=7.78*1e12, include_molecules=True, verbose=False):
+    def __init__(self, Teff=144, Tirr=6500, g=2288, kappa_ratio=1, r=c.R_sun.value, D=7.78*1e12, verbose=False):
         """Initialise pseudo-grey atmosphere model. Defaults from Jupiter and the Sun.
 
         PARAMETERS
@@ -35,6 +26,8 @@ class GreyModel(object):
             Irradiation temperature from the star in Kelvin. Default is 6500 K.
         g : `float`
             Surface gravity of the planet in cm/s^2. Default is 2288 cm/s^2.
+        kappa_ratio : `float`
+            Ratio of absorption to Planck opacity (kappa_j/kappa_b). Default is 1 for pseudo-grey.
         r : `float`
             Radius of the star in meters. Default is the solar radius.
         D : `float`
@@ -62,7 +55,6 @@ class GreyModel(object):
         self._opacities = None
         self._spectrum = None
 
-        self.include_molecules = include_molecules
         self.vprint = print if verbose else lambda *args, **kwargs: None
 
     @property
@@ -134,15 +126,6 @@ class GreyModel(object):
         self._opacities = (Ps, Ts, rhos, kappa_bars)
         return self._opacities
 
-    @property
-    def kappa_ross(self):
-        """Get cached opacities or compute them if not already done."""
-        if self._opacities is None:
-            self.load_opacities()
-
-        kappa = self._opacities[2] * self._opacities[3]
-        return kappa
-
     def apply_opacs(self):
         """Apply opacities to compute frequency-dependent optical depth profiles.
         
@@ -166,23 +149,11 @@ class GreyModel(object):
 
         # opacity matrix, using continuum opacities defined in opac.py
         self.vprint(f"[GreyModel] apply_opacs: Calculating kappa_nu_bars for {n_tau} tau points...")
-        if self.include_molecules:
-            # Create molecular abundances for all layers at once
-            abund = [abundances.estimate_molecular_abundances(
-                T_arr[j], 10**log10P_arr[j]
-            ) for j in range(n_tau)]
-            
-            # Use molecular-enhanced opacity
-            self._kappa_nu_bars = np.stack([
-                opac.kappa_cont_molecules(self.freqs.to_value(u.Hz), log10P_arr[j], T_arr[j], abund[j]) / rhos[j]
-                for j in range(n_tau)
-            ], axis=1)
-        else:
-            # Use regular continuum opacity
-            self._kappa_nu_bars = np.stack([
-                opac.kappa_cont(self.freqs.to_value(u.Hz), log10P_arr[j], T_arr[j]) / rhos[j]
-                for j in range(n_tau)
-            ], axis=1)
+        # Use regular continuum opacity
+        self._kappa_nu_bars = np.stack([
+            opac.kappa_cont(self.freqs.to_value(u.Hz), log10P_arr[j], T_arr[j]) / rhos[j]
+            for j in range(n_tau)
+        ], axis=1)
 
         # optical depth matrix via integration of opacities over initial tau grid
         self.vprint(f"[GreyModel] spectrum: Calculating tau_nu for {n_freq} frequencies...")
@@ -193,10 +164,6 @@ class GreyModel(object):
         self.vprint(f"[GreyModel] spectrum: tau_nu done")
 
         return T_arr, n_tau, tau_nu_mat
-
-    @property
-    def kappa_visual(self):
-        return self._kappa_nu_bars
 
     def make_spec(self, which):
         """Calculate the emergent spectrum, either local or irradiated.
